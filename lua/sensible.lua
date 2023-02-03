@@ -31,7 +31,7 @@ local defaults = {
   grepprg = 'rg --vimgrep',
   grepformat = '%f:%l:%c:%m',
   laststatus = 2,
-  statusline = [[%{expand('%:p:h:t')}/%t%h%r%#error#%m%*%=[%{strlen(&ft)?&ft:'none'}]%*%4c:%l/%L]],
+  statusline = '%2{mode()} | %t %m %r %= %c,%l %10y'
 }
 
 function M.setup(opts)
