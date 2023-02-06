@@ -23,6 +23,7 @@ local defaults = {
   shortmess = 'tonfFOxTcsiIl',
   showmode = false,
   completeopt = 'menuone,noselect',
+  complete = '.,w,b,u,i',
   list = true,
   listchars = { tab = '🢝 ', lead = '·', trail = '·', nbsp = '␣', eol = '¬' },
   sessionoptions = 'buffers,curdir,tabpages,folds,winpos,winsize',
@@ -31,7 +32,6 @@ local defaults = {
   pumheight = 5,
   grepprg = 'rg --vimgrep',
   grepformat = '%f:%l:%c:%m',
-  laststatus = 2,
   statusline = '%2{mode()} | %t %m %r %= %c,%l %10y'
 }
 
