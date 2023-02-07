@@ -35,9 +35,9 @@ local defaults = {
   statusline = ' %{mode()} | %t %m %r %= %c,%l/%L    %y',
 }
 
-function M.setup(opts)
-  local all = vim.tbl_deep_extend('force', defaults, opts)
-  for set, value in pairs(all) do
+function M.setup(addopts)
+  local opts = vim.tbl_deep_extend('force', defaults, addopts)
+  for set, value in pairs(opts) do
     vim.opt[set] = value
   end
 end
