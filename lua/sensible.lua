@@ -47,15 +47,15 @@ local defaults = {
   },
 }
 
-local addopts = {}
+M.addopts = {}
 
 function M.setup(addopts)
-  allopts = vim.tbl_deep_extend('force', defaults, addopts or {})
-  for set, value in pairs(allopts.global) do
+  M.addopts = vim.tbl_deep_extend('force', defaults, addopts or {})
+  for set, value in pairs(M.addopts.global) do
     vim.g[set] = value
   end
 
-  for set, value in pairs(allopts.options) do
+  for set, value in pairs(M.addopts.options) do
     vim.opt[set] = value
   end
 end
