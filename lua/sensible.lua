@@ -32,7 +32,7 @@ local defaults = {
     pumheight = 5,
     grepprg = 'rg --vimgrep',
     grepformat = '%f:%l:%c:%m',
-    statusline = ' %{mode()} | %t %m %r %= %c,%l/%L    %y',
+    statusline = ' %{mode()} | %t %m %r %= %c:%l/%L    %y',
   },
 
   global = {
