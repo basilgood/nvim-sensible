@@ -25,7 +25,7 @@ local defaults = {
     completeopt = 'menuone,noselect',
     complete = '.,w,b,u,i',
     list = true,
-    listchars = { tab = '⍿ ', lead = '⋅', trail = '⋅', nbsp = '␣' },
+    listchars = { tab = '⍿ ', trail = '⋅', nbsp = '␣' },
     sessionoptions = 'buffers,curdir,tabpages,folds,winpos,winsize',
     wildignore = { '*/node_modules/*,*/.git/*' },
     wildmode = 'longest:full,full',
