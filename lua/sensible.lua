@@ -25,7 +25,7 @@ local defaults = {
     completeopt = 'menuone,noselect',
     complete = '.,w,b,u,i',
     list = true,
-    listchars = { lead = '⋅', trail = '⋅', tab = '┊ ·', nbsp = '␣' },
+    listchars = { lead = '⋅', trail = '⋅', tab = '┊·', nbsp = '␣' },
     sessionoptions = 'buffers,curdir,tabpages,folds,winpos,winsize',
     wildmode = 'longest:full,full',
     pumheight = 5,
