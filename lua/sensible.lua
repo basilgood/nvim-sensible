@@ -40,7 +40,7 @@ local defaults = {
   },
 
   global = {
-    netrw_list_hide = '^./$,^../$',
+    netrw_list_hide = [[^\.\/$,^\.\.\/$]],
     netrw_bufsettings = 'noma nomod nonu nobl nowrap ro nornu nocul scl=no',
     netrw_banner = 0,
     netrw_preview = 1,
