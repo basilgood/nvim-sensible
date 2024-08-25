@@ -52,16 +52,21 @@ local defaults = {
   },
 }
 
-M.addopts = {}
-
 function M.setup(addopts)
-  M.addopts = vim.tbl_deep_extend('force', defaults, addopts or {})
-  for set, value in pairs(M.addopts.global) do
-    vim.g[set] = value
-  end
+  local opts = vim.tbl_deep_extend('force', defaults, addopts or {})
+  M._apply_global_opts(opts.global)
+  M._apply_local_opts(opts.options)
+end
 
-  for set, value in pairs(M.addopts.options) do
-    vim.opt[set] = value
+function M._apply_global_opts(global_opts)
+  for key, value in pairs(global_opts) do
+    vim.g[key] = value
+  end
+end
+
+function M._apply_local_opts(local_opts)
+  for key, value in pairs(local_opts) do
+    vim.opt[key] = value
   end
 end
 
