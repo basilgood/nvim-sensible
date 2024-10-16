@@ -14,6 +14,7 @@ local defaults = {
     shiftwidth = 2,
     expandtab = true,
     wrap = false,
+    breakindent = true,
     splitbelow = true,
     splitright = true,
     splitkeep = 'screen',
