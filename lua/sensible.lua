@@ -20,7 +20,7 @@ local defaults = {
     splitkeep = 'screen',
     signcolumn = 'yes',
     numberwidth = 3,
-    statuscolumn = '%s%=%{v:lnum} ',
+    statuscolumn = '%l%s',
     cursorlineopt = 'number',
     updatetime = 300,
     diffopt = 'internal,filler,closeoff,context:3,indent-heuristic,algorithm:patience,linematch:60',
@@ -29,7 +29,7 @@ local defaults = {
     cursorline = true,
     completeopt = 'menuone,noselect,noinsert',
     complete = '.,w,b,u,i',
-    list = true,
+    list = false,
     listchars = 'lead:⋅,trail:⋅,tab:‣ ,nbsp:␣,extends:»,precedes:«',
     fillchars = 'eob: ,diff: ',
     sessionoptions = 'buffers,curdir,tabpages,folds,winpos,winsize',
@@ -37,7 +37,7 @@ local defaults = {
     pumheight = 5,
     grepprg = 'rg --color=never --vimgrep',
     grepformat = '%f:%l:%c:%m',
-    statusline = ' %{mode()} | %t %m %r %= %c:%l/%L    %y',
+    statusline = ' %{expand("%:p:h:t")}/%t %{&modified?" ":""} %r %= %c:%l/%L    %y',
   },
 
   global = {
