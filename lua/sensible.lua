@@ -16,7 +16,7 @@ local function get_options()
     grepformat = '%f:%l:%c:%m',
     grepprg = 'rg --color=never --vimgrep',
     list = false,
-    listchars = 'lead:⋅,trail:⋅,tab:‣ ,nbsp:␣,extends:»,precedes:«',
+    listchars = 'lead:⋅,trail:⋅,tab:⁚⁚,nbsp:␣,extends:»,precedes:«',
     number = true,
     numberwidth = 3,
     path = '.,**',
