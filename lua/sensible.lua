@@ -56,6 +56,68 @@ local function get_globals()
   }
 end
 
+local function get_autocmds()
+  return {
+    {
+      event = 'TextYankPost',
+      pattern = '*',
+      callback = function()
+        vim.highlight.on_yank({ higroup = 'Search', timeout = 200 })
+      end,
+      desc = 'highlight yanked text',
+    },
+    {
+      event = 'BufWritePre',
+      pattern = '*',
+      callback = function()
+        local dir = vim.fn.expand('<afile>:p:h')
+        if vim.fn.isdirectory(dir) == 0 then
+          vim.fn.mkdir(dir, 'p')
+        end
+      end,
+      desc = 'auto-create directories when saving files',
+    },
+    {
+      event = 'BufReadPost',
+      pattern = '*',
+      callback = function()
+        local mark = vim.api.nvim_buf_get_mark(0, '"')
+        local lcount = vim.api.nvim_buf_line_count(0)
+        if mark[1] > 0 and mark[1] <= lcount then
+          pcall(vim.api.nvim_win_set_cursor, 0, mark)
+        end
+      end,
+      desc = 'jump to last cursor position',
+    },
+    {
+      event = 'FileType',
+      pattern = { 'help', 'qf' },
+      callback = function()
+        vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = true })
+      end,
+      desc = 'close with q',
+    },
+    {
+      event = 'BufWinEnter',
+      pattern = '*',
+      callback = function()
+        vim.opt.formatoptions = 'cqrnj'
+      end,
+      desc = 'no comments when o',
+    },
+    {
+      event = 'InsertEnter',
+      pattern = '*',
+      callback = function()
+        vim.schedule(function()
+          vim.cmd('nohlsearch')
+        end)
+      end,
+      desc = 'no hlsearch in insert mode',
+    },
+  }
+end
+
 local function apply_global_opts(global_opts)
   for key, value in pairs(global_opts) do
     if value ~= nil then
@@ -72,10 +134,28 @@ local function apply_local_opts(local_opts)
   end
 end
 
+local function apply_autocmds(autocmds)
+  local group = vim.api.nvim_create_augroup('SensibleAutocmds', { clear = true })
+  for _, autocmd in ipairs(autocmds) do
+    vim.api.nvim_create_autocmd(autocmd.event, {
+      group = group,
+      pattern = autocmd.pattern,
+      callback = autocmd.callback,
+      desc = autocmd.desc,
+    })
+  end
+end
+
 function M.setup(addopts)
-  local opts = vim.tbl_deep_extend('force', { options = get_options(), global = get_globals() }, addopts or {})
+  local opts = vim.tbl_deep_extend('force', {
+    options = get_options(),
+    global = get_globals(),
+    autocmds = get_autocmds(),
+  }, addopts or {})
+
   apply_global_opts(opts.global)
   apply_local_opts(opts.options)
+  apply_autocmds(opts.autocmds)
 end
 
 return M
