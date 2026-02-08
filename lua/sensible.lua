@@ -6,34 +6,43 @@ local function get_options()
     autowriteall = true,
     breakindent = true,
     complete = '.,w,b,u,i',
-    completeopt = 'menuone,noselect,noinsert',
+    completeopt = 'menuone,noselect,popup',
     cursorline = true,
     cursorlineopt = 'number',
-    diffopt = 'internal,filler,closeoff,context:3,indent-heuristic,algorithm:patience,linematch:60',
+    diffopt = 'internal,filler,closeoff,context:3,indent-heuristic,algorithm:histogram,linematch:40',
     expandtab = true,
-    fillchars = 'eob: ,diff: ',
+    fillchars = {
+      eob = ' ',
+      diff = '╱',
+      foldopen = '',
+      foldclose = '',
+      fold = ' ',
+      foldsep = ' ',
+      msgsep = '─',
+    },
     gdefault = true,
-    grepformat = '%f:%l:%c:%m',
-    grepprg = 'rg --color=never --vimgrep',
-    list = false,
-    listchars = 'lead:⋅,trail:⋅,tab:⁚⁚,nbsp:␣,extends:»,precedes:«',
+    iskeyword = '@,48-57,_,192-255,-',
+    jumpoptions = 'view',
+    linebreak = true,
+    list = true,
+    listchars = 'trail:⋅,tab:⁚⁚,nbsp:␣,extends:»,precedes:«',
     number = true,
-    numberwidth = 3,
-    path = '.,**',
+    numberwidth = 1,
+    ruler = true,
+    rulerformat = '%y %-4.(%2c:%l/%L%)',
+    pumborder = 'solid',
     pumheight = 5,
-    sessionoptions = 'buffers,curdir,tabpages,folds,winpos,winsize',
     shiftwidth = 2,
     shortmess = 'tonfFOxTcsiIl',
     showmode = false,
     signcolumn = 'yes',
-    softtabstop = 2,
     splitbelow = true,
     splitkeep = 'screen',
     splitright = true,
     statuscolumn = '%l%s',
-    statusline = ' %{expand("%:p:h:t")}/%t %{&modified?" ":""} %r %= %c:%l/%L    %y',
     swapfile = false,
     tabstop = 2,
+    timeoutlen = 2500,
     undofile = true,
     updatetime = 300,
     wildmode = 'longest:full,full',
@@ -44,14 +53,11 @@ end
 
 local function get_globals()
   return {
-    netrw_alto = 'spr',
     netrw_banner = 0,
-    netrw_bufsettings = 'noma nomod nonu nobl nowrap ro nornu nocul scl=no',
     netrw_list_hide = [[^\.\/$,^\.\.\/$]],
-    netrw_localcopydircmd = 'cp -r',
-    netrw_localrmdir = 'rm -r',
+    netrw_alto = 0,
     netrw_preview = 1,
-    netrw_special_syntax = 1,
+    netrw_localcopydircmd = 'cp -r',
     netrw_use_errorwindow = 0,
   }
 end
@@ -60,26 +66,21 @@ local function get_autocmds()
   return {
     {
       event = 'TextYankPost',
-      pattern = '*',
       callback = function()
-        vim.highlight.on_yank({ higroup = 'Search', timeout = 200 })
+        vim.highlight.on_yank({ higroup = 'Visual' })
       end,
-      desc = 'highlight yanked text',
     },
     {
       event = 'BufWritePre',
-      pattern = '*',
       callback = function()
         local dir = vim.fn.expand('<afile>:p:h')
         if vim.fn.isdirectory(dir) == 0 then
           vim.fn.mkdir(dir, 'p')
         end
       end,
-      desc = 'auto-create directories when saving files',
     },
     {
       event = 'BufReadPost',
-      pattern = '*',
       callback = function()
         local mark = vim.api.nvim_buf_get_mark(0, '"')
         local lcount = vim.api.nvim_buf_line_count(0)
@@ -87,50 +88,82 @@ local function get_autocmds()
           pcall(vim.api.nvim_win_set_cursor, 0, mark)
         end
       end,
-      desc = 'jump to last cursor position',
     },
     {
       event = 'FileType',
-      pattern = { 'help', 'qf' },
+      pattern = { 'help', 'qf', 'git' },
       callback = function()
         vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = true })
       end,
-      desc = 'close with q',
     },
     {
       event = 'BufWinEnter',
-      pattern = '*',
       callback = function()
         vim.opt.formatoptions = 'cqrnj'
       end,
-      desc = 'no comments when o',
     },
     {
       event = 'InsertEnter',
-      pattern = '*',
       callback = function()
         vim.schedule(function()
           vim.cmd('nohlsearch')
         end)
       end,
-      desc = 'no hlsearch in insert mode',
+    },
+    {
+      event = 'LspAttach',
+      callback = function(args)
+        local bufnr = args.buf
+        local buffer_map = function(keys, func, desc)
+          vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
+        end
+
+        buffer_map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
+        buffer_map('<c-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
+        buffer_map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+
+        local hover_or_open_diagnostic_float = function()
+          local lineNumber = vim.fn.line('.') - 1
+          local diag = vim.diagnostic.get(0, { lnum = lineNumber })
+          local has_diagnostics = #diag > 0
+          if has_diagnostics then
+            vim.diagnostic.open_float()
+          else
+            vim.lsp.buf.hover()
+          end
+        end
+
+        buffer_map('K', hover_or_open_diagnostic_float, 'Hover Documentation')
+
+        vim.notify('LSP integration enabled.', vim.log.levels.DEBUG)
+      end,
     },
   }
 end
 
-local function apply_global_opts(global_opts)
-  for key, value in pairs(global_opts) do
-    if value ~= nil then
-      vim.g[key] = value
+local function apply_options(options)
+  for k, v in pairs(options) do
+    if type(v) == 'table' and (v.append or v.prepend or v.remove) then
+      -- Handle operation tables
+      if v.append then
+        vim.opt[k]:append(v.append)
+      end
+      if v.prepend then
+        vim.opt[k]:prepend(v.prepend)
+      end
+      if v.remove then
+        vim.opt[k]:remove(v.remove)
+      end
+    else
+      -- Normal value assignment
+      vim.opt[k] = v
     end
   end
 end
 
-local function apply_local_opts(local_opts)
-  for key, value in pairs(local_opts) do
-    if value ~= nil then
-      vim.opt[key] = value
-    end
+local function apply_globals(globals)
+  for k, v in pairs(globals) do
+    vim.g[k] = v
   end
 end
 
@@ -141,21 +174,20 @@ local function apply_autocmds(autocmds)
       group = group,
       pattern = autocmd.pattern,
       callback = autocmd.callback,
-      desc = autocmd.desc,
     })
   end
 end
 
-function M.setup(addopts)
-  local opts = vim.tbl_deep_extend('force', {
-    options = get_options(),
-    global = get_globals(),
-    autocmds = get_autocmds(),
-  }, addopts or {})
+function M.setup(opts)
+  opts = opts or {}
 
-  apply_global_opts(opts.global)
-  apply_local_opts(opts.options)
-  apply_autocmds(opts.autocmds)
+  local options = vim.tbl_deep_extend('force', get_options(), opts.options or {})
+  local globals = vim.tbl_deep_extend('force', get_globals(), opts.globals or {})
+  local autocmds = opts.autocmds or get_autocmds()
+
+  apply_globals(globals)
+  apply_options(options)
+  apply_autocmds(autocmds)
 end
 
 return M
