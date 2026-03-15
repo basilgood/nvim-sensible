@@ -5,7 +5,6 @@ local function get_options()
     autowrite = true,
     autowriteall = true,
     breakindent = true,
-    complete = '.,w,b,u,i',
     completeopt = 'menuone,noselect,popup',
     cursorline = true,
     cursorlineopt = 'number',
