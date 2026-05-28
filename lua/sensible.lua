@@ -66,7 +66,7 @@ local function get_autocmds()
     {
       event = 'TextYankPost',
       callback = function()
-        vim.highlight.on_yank({ higroup = 'Visual' })
+        vim.hl.hl_op({ higroup='Visual', timeout=300 })
       end,
     },
     {
