@@ -90,7 +90,7 @@ local function get_autocmds()
     },
     {
       event = 'FileType',
-      pattern = { 'help', 'qf', 'git' },
+      pattern = { 'help', 'qf', 'git', 'fugitive' },
       callback = function()
         vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = true })
       end,
