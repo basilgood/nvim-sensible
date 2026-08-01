@@ -52,12 +52,7 @@ end
 
 local function get_globals()
   return {
-    netrw_banner = 0,
-    netrw_list_hide = [[^\.\/$,^\.\.\/$]],
-    netrw_alto = 0,
-    netrw_preview = 1,
-    netrw_localcopydircmd = 'cp -r',
-    netrw_use_errorwindow = 0,
+    loaded_netrwPlugin = 1,
   }
 end
 
@@ -93,6 +88,80 @@ local function get_autocmds()
       pattern = { 'help', 'qf', 'git', 'fugitive', 'nvim-pack' },
       callback = function()
         vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = true })
+      end,
+    },
+    {
+      event = 'FileType',
+      pattern = 'directory',
+      callback = function()
+        vim.opt_local.bufhidden = 'delete'
+        vim.opt_local.winbar = '[dir] %f'
+
+        local function reload()
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(nvim-dir-reload)', true, false, true), 'n', false)
+        end
+
+        local function run(cmd)
+          local result = vim.fn.system(cmd)
+          if vim.v.shell_error ~= 0 then
+            vim.notify(result:gsub('%s+$', ''), vim.log.levels.ERROR)
+            return false
+          end
+          return true
+        end
+
+        vim.keymap.set('n', '%', function()
+          vim.fn.feedkeys(':edit ' .. vim.fn.expand('%:p:h') .. '/', 'n')
+        end, { buffer = true, desc = 'Edit file' })
+
+        vim.keymap.set('n', 'q', function()
+          local buf = vim.api.nvim_get_current_buf()
+          local alt = vim.fn.bufnr('#')
+          if alt > 0 and alt ~= buf and vim.fn.buflisted(alt) == 1 then
+            vim.api.nvim_set_current_buf(alt)
+          else
+            vim.cmd.enew()
+          end
+        end, { buffer = true, desc = 'Close directory buffer' })
+
+        vim.keymap.set('n', 'r', function()
+          local name = vim.fn.expand('<cfile>')
+          if name == '' then return end
+          local source = vim.fn.expand('%:p:h') .. '/' .. name
+          local ok, target = pcall(vim.fn.input, 'Move ' .. name .. ' to: ', source)
+          if not ok or target == '' or target == source then return end
+          if run('mv ' .. vim.fn.shellescape(source) .. ' ' .. vim.fn.shellescape(target)) then
+            reload()
+          end
+        end, { buffer = true, desc = 'Move / Rename' })
+
+        vim.keymap.set('n', 'd', function()
+          local ok, dir_name = pcall(vim.fn.input, 'Directory name: ')
+          if not ok or dir_name == '' then return end
+          local full_path = vim.fn.expand('%:p:h') .. '/' .. dir_name
+          if run('mkdir ' .. vim.fn.shellescape(full_path)) then
+            reload()
+          end
+        end, { buffer = true, nowait = true, desc = 'New folder' })
+
+        vim.keymap.set('n', 'D', function()
+          local name = vim.fn.expand('<cfile>')
+          if name == '' then return end
+          local full_path = vim.fn.expand('%:p:h') .. '/' .. name
+          local is_dir = vim.fn.isdirectory(full_path) == 1
+          local cmd = (is_dir and 'rm -rd ' or 'rm ') .. vim.fn.shellescape(full_path)
+          local ok, confirm = pcall(vim.fn.input, 'Delete ' .. name .. ' ? [' .. cmd .. '] [y/N] ')
+          if not ok or confirm:lower() ~= 'y' then return end
+          if not is_dir then
+            local bufnr = vim.fn.bufnr(full_path)
+            if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
+              vim.cmd.bdelete({ args = { tostring(bufnr) }, bang = true })
+            end
+          end
+          if run(cmd) then
+            reload()
+          end
+        end, { buffer = true, nowait = true, desc = 'Delete file / folder' })
       end,
     },
     {
