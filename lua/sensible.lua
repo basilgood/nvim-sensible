@@ -135,6 +135,19 @@ local function get_autocmds()
           end
         end, { buffer = true, desc = 'Move / Rename' })
 
+        vim.keymap.set('n', 'C', function()
+          local name = vim.fn.expand('<cfile>')
+          if name == '' then return end
+          local source = vim.fn.expand('%:p:h') .. '/' .. name
+          local is_dir = vim.fn.isdirectory(source) == 1
+          local ok, target = pcall(vim.fn.input, 'Copy ' .. name .. ' to: ', source)
+          if not ok or target == '' or target == source then return end
+          local cmd = (is_dir and 'cp -r ' or 'cp ') .. vim.fn.shellescape(source) .. ' ' .. vim.fn.shellescape(target)
+          if run(cmd) then
+            reload()
+          end
+        end, { buffer = true, desc = 'Copy file / folder' })
+
         vim.keymap.set('n', 'd', function()
           local ok, dir_name = pcall(vim.fn.input, 'Directory name: ')
           if not ok or dir_name == '' then return end
