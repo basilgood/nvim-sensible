@@ -111,7 +111,7 @@ local function get_autocmds()
         end
 
         vim.keymap.set('n', '%', function()
-          vim.fn.feedkeys(':edit ' .. vim.fn.expand('%:p:h') .. '/', 'n')
+          vim.fn.feedkeys(':edit ' .. vim.fn.getcwd() .. '/', 'n')
         end, { buffer = true, desc = 'Edit file' })
 
         vim.keymap.set('n', 'q', function()
@@ -127,7 +127,7 @@ local function get_autocmds()
         vim.keymap.set('n', 'r', function()
           local name = vim.fn.expand('<cfile>')
           if name == '' then return end
-          local source = vim.fn.expand('%:p:h') .. '/' .. name
+          local source = vim.fn.getcwd() .. '/' .. name
           local ok, target = pcall(vim.fn.input, 'Move ' .. name .. ' to: ', source)
           if not ok or target == '' or target == source then return end
           if run('mv ' .. vim.fn.shellescape(source) .. ' ' .. vim.fn.shellescape(target)) then
@@ -138,7 +138,7 @@ local function get_autocmds()
         vim.keymap.set('n', 'C', function()
           local name = vim.fn.expand('<cfile>')
           if name == '' then return end
-          local source = vim.fn.expand('%:p:h') .. '/' .. name
+          local source = vim.fn.getcwd() .. '/' .. name
           local is_dir = vim.fn.isdirectory(source) == 1
           local ok, target = pcall(vim.fn.input, 'Copy ' .. name .. ' to: ', source)
           if not ok or target == '' or target == source then return end
@@ -151,7 +151,7 @@ local function get_autocmds()
         vim.keymap.set('n', 'd', function()
           local ok, dir_name = pcall(vim.fn.input, 'Directory name: ')
           if not ok or dir_name == '' then return end
-          local full_path = vim.fn.expand('%:p:h') .. '/' .. dir_name
+          local full_path = vim.fn.getcwd() .. '/' .. dir_name
           if run('mkdir ' .. vim.fn.shellescape(full_path)) then
             reload()
           end
@@ -160,7 +160,7 @@ local function get_autocmds()
         vim.keymap.set('n', 'D', function()
           local name = vim.fn.expand('<cfile>')
           if name == '' then return end
-          local full_path = vim.fn.expand('%:p:h') .. '/' .. name
+          local full_path = vim.fn.getcwd() .. '/' .. name
           local is_dir = vim.fn.isdirectory(full_path) == 1
           local cmd = (is_dir and 'rm -rd ' or 'rm ') .. vim.fn.shellescape(full_path)
           local ok, confirm = pcall(vim.fn.input, 'Delete ' .. name .. ' ? [' .. cmd .. '] [y/N] ')
