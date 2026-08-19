@@ -61,7 +61,7 @@ local function get_autocmds()
     {
       event = 'TextYankPost',
       callback = function()
-        vim.hl.hl_op({ higroup='Visual', timeout=300 })
+        vim.hl.hl_op({ higroup = 'Visual', timeout = 300 })
       end,
     },
     {
@@ -98,21 +98,61 @@ local function get_autocmds()
         vim.opt_local.winbar = '[dir] %f'
 
         local function reload()
-          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Plug>(nvim-dir-reload)', true, false, true), 'n', false)
+          vim.api.nvim_feedkeys(
+            vim.api.nvim_replace_termcodes('<Plug>(nvim-dir-reload)', true, false, true),
+            'n',
+            false
+          )
         end
 
-        local function run(cmd)
-          local result = vim.fn.system(cmd)
-          if vim.v.shell_error ~= 0 then
-            vim.notify(result:gsub('%s+$', ''), vim.log.levels.ERROR)
+        local function notify(err)
+          vim.notify(tostring(err):gsub('%s+$', ''), vim.log.levels.ERROR)
+        end
+
+        local function run(fn)
+          local ok, ret, err = pcall(fn)
+          if not ok or (ret == nil and err ~= nil) then
+            notify(ok and err or ret)
             return false
           end
+          reload()
           return true
         end
 
+        local function copytree(from, to)
+          local stat = vim.uv.fs_lstat(from)
+          if not stat then
+            error('no such file: ' .. from)
+          end
+          if stat.type == 'directory' then
+            vim.uv.fs_mkdir(to, 493)
+            for name in vim.fs.dir(from) do
+              copytree(from .. '/' .. name, to .. '/' .. name)
+            end
+          else
+            local r, e = vim.uv.fs_copyfile(from, to)
+            if r == nil then
+              error(e, 0)
+            end
+          end
+        end
+
         vim.keymap.set('n', '%', function()
-          vim.fn.feedkeys(':edit ' .. vim.fn.expand('%:p:h') .. '/', 'n')
+          vim.api.nvim_feedkeys(':edit ' .. vim.fs.basename(vim.fn.getcwd()) .. '/', 'n', true)
         end, { buffer = true, desc = 'Edit file' })
+
+        vim.keymap.set('n', '.', function()
+          local cursor = vim.api.nvim_win_get_cursor(0)
+          local fname = vim.api.nvim_buf_get_lines(0, cursor[1] - 1, cursor[1], true)[1]
+          if fname == '' then
+            return
+          end
+          vim.api.nvim_feedkeys(
+            vim.api.nvim_replace_termcodes(':! ' .. vim.fn.fnameescape(fname) .. '<Home><Right>', true, false, true),
+            'n',
+            false
+          )
+        end, { buffer = true, remap = false, nowait = true, desc = 'Prefill cmd with file name' })
 
         vim.keymap.set('n', 'q', function()
           local buf = vim.api.nvim_get_current_buf()
@@ -126,54 +166,74 @@ local function get_autocmds()
 
         vim.keymap.set('n', 'r', function()
           local name = vim.fn.expand('<cfile>')
-          if name == '' then return end
-          local source = vim.fn.expand('%:p:h') .. '/' .. name
-          local ok, target = pcall(vim.fn.input, 'Move ' .. name .. ' to: ', source)
-          if not ok or target == '' or target == source then return end
-          if run('mv ' .. vim.fn.shellescape(source) .. ' ' .. vim.fn.shellescape(target)) then
-            reload()
+          if name == '' then
+            return
           end
+          local source = vim.fn.getcwd() .. '/' .. name
+          local target = vim.fn.input('Move ' .. name .. ' to: ', name)
+          if target == '' or target == name then
+            return
+          end
+          run(function()
+            vim.uv.fs_rename(source, target)
+          end)
         end, { buffer = true, desc = 'Move / Rename' })
 
         vim.keymap.set('n', 'C', function()
           local name = vim.fn.expand('<cfile>')
-          if name == '' then return end
-          local source = vim.fn.expand('%:p:h') .. '/' .. name
-          local is_dir = vim.fn.isdirectory(source) == 1
-          local ok, target = pcall(vim.fn.input, 'Copy ' .. name .. ' to: ', source)
-          if not ok or target == '' or target == source then return end
-          local cmd = (is_dir and 'cp -r ' or 'cp ') .. vim.fn.shellescape(source) .. ' ' .. vim.fn.shellescape(target)
-          if run(cmd) then
-            reload()
+          if name == '' then
+            return
           end
+          local source = vim.fn.getcwd() .. '/' .. name
+          local root = vim.fn.getcwd(-1)
+          local from = vim.fs.relpath(root, source)
+          local target = vim.fn.input('Copy ' .. name .. ' to: ', from)
+          if target == '' or target == from then
+            return
+          end
+          local abs = function(p)
+            return vim.fn.isabsolutepath(p) == 1 and p or vim.fs.joinpath(root, p)
+          end
+          local dest = abs(target)
+          if vim.fn.isdirectory(dest) == 1 then
+            dest = dest .. '/' .. vim.fs.basename(source)
+          end
+          run(function()
+            copytree(source, dest)
+          end)
         end, { buffer = true, desc = 'Copy file / folder' })
 
         vim.keymap.set('n', 'd', function()
-          local ok, dir_name = pcall(vim.fn.input, 'Directory name: ')
-          if not ok or dir_name == '' then return end
-          local full_path = vim.fn.expand('%:p:h') .. '/' .. dir_name
-          if run('mkdir ' .. vim.fn.shellescape(full_path)) then
-            reload()
+          local dir_name = vim.fn.input('Directory name: ')
+          if dir_name == '' then
+            return
           end
+          local full_path = vim.fn.getcwd() .. '/' .. dir_name
+          run(function()
+            return vim.fn.mkdir(full_path, 'p')
+          end)
         end, { buffer = true, nowait = true, desc = 'New folder' })
 
         vim.keymap.set('n', 'D', function()
           local name = vim.fn.expand('<cfile>')
-          if name == '' then return end
-          local full_path = vim.fn.expand('%:p:h') .. '/' .. name
+          if name == '' then
+            return
+          end
+          local full_path = vim.fn.getcwd() .. '/' .. name
           local is_dir = vim.fn.isdirectory(full_path) == 1
-          local cmd = (is_dir and 'rm -rd ' or 'rm ') .. vim.fn.shellescape(full_path)
-          local ok, confirm = pcall(vim.fn.input, 'Delete ' .. name .. ' ? [' .. cmd .. '] [y/N] ')
-          if not ok or confirm:lower() ~= 'y' then return end
+          local confirm = vim.fn.input('Delete ' .. name .. '? [y/N] ')
+          if confirm:lower() ~= 'y' then
+            return
+          end
           if not is_dir then
             local bufnr = vim.fn.bufnr(full_path)
             if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
               vim.cmd.bdelete({ args = { tostring(bufnr) }, bang = true })
             end
           end
-          if run(cmd) then
-            reload()
-          end
+          run(function()
+            vim.fs.rm(full_path, is_dir and { recursive = true } or {})
+          end)
         end, { buffer = true, nowait = true, desc = 'Delete file / folder' })
       end,
     },
@@ -225,7 +285,6 @@ end
 local function apply_options(options)
   for k, v in pairs(options) do
     if type(v) == 'table' and (v.append or v.prepend or v.remove) then
-      -- Handle operation tables
       if v.append then
         vim.opt[k]:append(v.append)
       end
@@ -236,7 +295,6 @@ local function apply_options(options)
         vim.opt[k]:remove(v.remove)
       end
     else
-      -- Normal value assignment
       vim.opt[k] = v
     end
   end
