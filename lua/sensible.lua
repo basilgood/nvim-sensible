@@ -275,8 +275,6 @@ local function get_autocmds()
         end
 
         buffer_map('K', hover_or_open_diagnostic_float, 'Hover Documentation')
-
-        vim.notify('LSP integration enabled.', vim.log.levels.DEBUG)
       end,
     },
   }
