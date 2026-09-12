@@ -138,7 +138,7 @@ local function get_autocmds()
         end
 
         vim.keymap.set('n', '%', function()
-          vim.api.nvim_feedkeys(':edit ' .. vim.fs.basename(vim.fn.getcwd()) .. '/', 'n', true)
+          vim.api.nvim_feedkeys(':edit ', 'n', true)
         end, { buffer = true, desc = 'Edit file' })
 
         vim.keymap.set('n', '.', function()
