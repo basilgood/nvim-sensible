@@ -119,6 +119,10 @@ local function get_autocmds()
           return true
         end
 
+        local function listing_dir()
+          return vim.fs.normalize(vim.api.nvim_buf_get_name(0))
+        end
+
         local function copytree(from, to)
           local stat = vim.uv.fs_lstat(from)
           if not stat then
@@ -138,7 +142,13 @@ local function get_autocmds()
         end
 
         vim.keymap.set('n', '%', function()
-          vim.api.nvim_feedkeys(':edit ', 'n', true)
+          local name = vim.fn.expand('<cfile>')
+          if name == '' then
+            vim.api.nvim_feedkeys(':edit ', 'n', true)
+            return
+          end
+          local path = vim.fs.joinpath(listing_dir(), name)
+          vim.api.nvim_feedkeys(':edit ' .. vim.fn.fnameescape(path), 'n', true)
         end, { buffer = true, desc = 'Edit file' })
 
         vim.keymap.set('n', '.', function()
@@ -147,8 +157,9 @@ local function get_autocmds()
           if fname == '' then
             return
           end
+          local path = vim.fs.joinpath(listing_dir(), fname)
           vim.api.nvim_feedkeys(
-            vim.api.nvim_replace_termcodes(':! ' .. vim.fn.fnameescape(fname) .. '<Home><Right>', true, false, true),
+            vim.api.nvim_replace_termcodes(':! ' .. vim.fn.fnameescape(path) .. '<Home><Right>', true, false, true),
             'n',
             false
           )
@@ -169,13 +180,15 @@ local function get_autocmds()
           if name == '' then
             return
           end
-          local source = vim.fn.getcwd() .. '/' .. name
+          local dir = listing_dir()
+          local source = vim.fs.joinpath(dir, name)
           local target = vim.fn.input('Move ' .. name .. ' to: ', name)
           if target == '' or target == name then
             return
           end
+          local dest = vim.fn.isabsolutepath(target) == 1 and target or vim.fs.joinpath(dir, target)
           run(function()
-            vim.uv.fs_rename(source, target)
+            vim.uv.fs_rename(source, dest)
           end)
         end, { buffer = true, desc = 'Move / Rename' })
 
@@ -184,19 +197,15 @@ local function get_autocmds()
           if name == '' then
             return
           end
-          local source = vim.fn.getcwd() .. '/' .. name
-          local root = vim.fn.getcwd(-1)
-          local from = vim.fs.relpath(root, source)
-          local target = vim.fn.input('Copy ' .. name .. ' to: ', from)
-          if target == '' or target == from then
+          local dir = listing_dir()
+          local source = vim.fs.joinpath(dir, name)
+          local target = vim.fn.input('Copy ' .. name .. ' to: ', name)
+          if target == '' or target == name then
             return
           end
-          local abs = function(p)
-            return vim.fn.isabsolutepath(p) == 1 and p or vim.fs.joinpath(root, p)
-          end
-          local dest = abs(target)
+          local dest = vim.fn.isabsolutepath(target) == 1 and target or vim.fs.joinpath(dir, target)
           if vim.fn.isdirectory(dest) == 1 then
-            dest = dest .. '/' .. vim.fs.basename(source)
+            dest = vim.fs.joinpath(dest, vim.fs.basename(source))
           end
           run(function()
             copytree(source, dest)
@@ -208,7 +217,7 @@ local function get_autocmds()
           if dir_name == '' then
             return
           end
-          local full_path = vim.fn.getcwd() .. '/' .. dir_name
+          local full_path = vim.fs.joinpath(listing_dir(), dir_name)
           run(function()
             return vim.fn.mkdir(full_path, 'p')
           end)
@@ -219,7 +228,7 @@ local function get_autocmds()
           if name == '' then
             return
           end
-          local full_path = vim.fn.getcwd() .. '/' .. name
+          local full_path = vim.fs.joinpath(listing_dir(), name)
           local is_dir = vim.fn.isdirectory(full_path) == 1
           local confirm = vim.fn.input('Delete ' .. name .. '? [y/N] ')
           if confirm:lower() ~= 'y' then
