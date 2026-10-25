@@ -123,6 +123,16 @@ local function get_autocmds()
           return vim.fs.normalize(vim.api.nvim_buf_get_name(0))
         end
 
+        local function resolve(path)
+          -- normalize expands ~ and environment variables, which isabsolutepath
+          -- would otherwise treat as absolute without expanding (libuv can't).
+          path = vim.fs.normalize(path)
+          if vim.fn.isabsolutepath(path) == 1 then
+            return path
+          end
+          return vim.fs.normalize(vim.fs.joinpath(listing_dir(), path))
+        end
+
         local function copytree(from, to)
           local stat = vim.uv.fs_lstat(from)
           if not stat then
@@ -180,13 +190,12 @@ local function get_autocmds()
           if name == '' then
             return
           end
-          local dir = listing_dir()
-          local source = vim.fs.joinpath(dir, name)
+          local source = vim.fs.joinpath(listing_dir(), name)
           local target = vim.fn.input('Move ' .. name .. ' to: ', name)
           if target == '' or target == name then
             return
           end
-          local dest = vim.fn.isabsolutepath(target) == 1 and target or vim.fs.joinpath(dir, target)
+          local dest = resolve(target)
           run(function()
             vim.uv.fs_rename(source, dest)
           end)
@@ -197,17 +206,17 @@ local function get_autocmds()
           if name == '' then
             return
           end
-          local dir = listing_dir()
-          local source = vim.fs.joinpath(dir, name)
-          local target = vim.fn.input('Copy ' .. name .. ' to: ', name)
+          local source = vim.fs.joinpath(listing_dir(), name)
+          local target = vim.fn.input('Copy ' .. name .. ' to: ', name, 'file')
           if target == '' or target == name then
             return
           end
-          local dest = vim.fn.isabsolutepath(target) == 1 and target or vim.fs.joinpath(dir, target)
+          local dest = resolve(target)
           if vim.fn.isdirectory(dest) == 1 then
             dest = vim.fs.joinpath(dest, vim.fs.basename(source))
           end
           run(function()
+            vim.fn.mkdir(vim.fs.dirname(dest), 'p')
             copytree(source, dest)
           end)
         end, { buffer = true, desc = 'Copy file / folder' })
