@@ -152,13 +152,8 @@ local function get_autocmds()
         end
 
         vim.keymap.set('n', '%', function()
-          local name = vim.fn.expand('<cfile>')
-          if name == '' then
-            vim.api.nvim_feedkeys(':edit ', 'n', true)
-            return
-          end
-          local path = vim.fs.joinpath(listing_dir(), name)
-          vim.api.nvim_feedkeys(':edit ' .. vim.fn.fnameescape(path), 'n', true)
+          local path = vim.fn.fnameescape(listing_dir() .. '/')
+          vim.api.nvim_feedkeys(':edit ' .. path, 'n', true)
         end, { buffer = true, desc = 'Edit file' })
 
         vim.keymap.set('n', '.', function()
